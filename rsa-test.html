@@ -131,6 +131,10 @@
             </div>
             <button class="button" onclick="decryptText()" id="decryptBtn" disabled>복호화</button>
             <div id="decryptResult"></div>
+            <div class="input-group">
+                <label for="decryptedText">복호화된 텍스트:</label>
+                <textarea id="decryptedText" placeholder="복호화된 텍스트가 여기에 표시됩니다..." readonly></textarea>
+            </div>
         </div>
 
         <div class="section">
@@ -145,12 +149,25 @@
             </div>
             <button class="button" onclick="copyPublicKey()">공개키 복사</button>
             <button class="button" onclick="copyPrivateKey()">개인키 복사</button>
+            <button class="button" onclick="copyDecryptedText()">복호화된 텍스트 복사</button>
         </div>
 
         <div class="section">
             <h3>5. 자동 테스트</h3>
             <button class="button" onclick="runAutoTest()">전체 테스트 실행</button>
+            <button class="button" onclick="runVariabilityTest()">암호화 변동성 테스트</button>
             <div id="testResult"></div>
+        </div>
+
+        <div class="section">
+            <h3>6. 쿼리 스트링 생성</h3>
+            <button class="button" onclick="generateQueryString()">쿼리 스트링 생성</button>
+            <div class="input-group">
+                <label for="queryString">생성된 쿼리 스트링:</label>
+                <textarea id="queryString" placeholder="쿼리 스트링이 여기에 표시됩니다..." readonly></textarea>
+            </div>
+            <button class="button" onclick="copyQueryString()">쿼리 스트링 복사</button>
+            <button class="button" onclick="openPasswordPage()">Password 페이지에서 열기</button>
         </div>
     </div>
 
@@ -187,15 +204,23 @@
                     return;
                 }
 
+                if (!rsaCrypto) {
+                    showResult('encryptResult', 'RSA 암호화 객체가 초기화되지 않았습니다. 먼저 키를 생성하세요.', 'error');
+                    return;
+                }
+
                 showResult('encryptResult', '암호화 중...', 'info');
+                console.log('암호화 시작 - 원본 텍스트:', plainText);
                 
                 currentEncrypted = await rsaCrypto.encrypt(plainText);
                 document.getElementById('encryptedText').value = currentEncrypted;
                 document.getElementById('decryptBtn').disabled = false;
                 
                 showResult('encryptResult', `✓ 암호화 완료! (길이: ${currentEncrypted.length}자)`, 'success');
+                console.log('암호화 성공:', currentEncrypted.substring(0, 50) + '...');
             } catch (error) {
-                showResult('encryptResult', `❌ 암호화 실패: ${error.message}`, 'error');
+                console.error('암호화 오류 상세:', error);
+                showResult('encryptResult', `❌ 암호화 실패: ${error.message}<br><small>브라우저 개발자 도구의 콘솔을 확인하세요.</small>`, 'error');
             }
         }
 
@@ -207,13 +232,24 @@
                     return;
                 }
 
+                if (!rsaCrypto) {
+                    showResult('decryptResult', 'RSA 암호화 객체가 초기화되지 않았습니다. 먼저 키를 생성하세요.', 'error');
+                    return;
+                }
+
                 showResult('decryptResult', '복호화 중...', 'info');
+                console.log('복호화 시작 - 암호화된 데이터:', encryptedText.substring(0, 50) + '...');
                 
                 const decrypted = await rsaCrypto.decrypt(encryptedText);
                 
-                showResult('decryptResult', `✓ 복호화 완료!\n복호화된 텍스트: ${decrypted}`, 'success');
+                // 복호화된 텍스트를 별도 텍스트 영역에 표시
+                document.getElementById('decryptedText').value = decrypted;
+                
+                showResult('decryptResult', `✓ 복호화 완료!<br>복호화된 텍스트: <strong>${decrypted}</strong>`, 'success');
+                console.log('복호화 성공:', decrypted);
             } catch (error) {
-                showResult('decryptResult', `❌ 복호화 실패: ${error.message}`, 'error');
+                console.error('복호화 오류 상세:', error);
+                showResult('decryptResult', `❌ 복호화 실패: ${error.message}<br><small>브라우저 개발자 도구의 콘솔을 확인하세요.</small>`, 'error');
             }
         }
 
@@ -226,12 +262,32 @@
                 document.getElementById('publicKeyInput').value = result.publicKey;
                 document.getElementById('privateKeyInput').value = result.privateKey;
                 document.getElementById('encryptedText').value = result.encrypted;
+                document.getElementById('decryptedText').value = result.decrypted;
                 document.getElementById('encryptBtn').disabled = false;
                 document.getElementById('decryptBtn').disabled = false;
                 
                 showResult('testResult', '🎉 자동 테스트 완료! 모든 기능이 정상적으로 작동합니다.', 'success');
             } catch (error) {
                 showResult('testResult', `❌ 자동 테스트 실패: ${error.message}`, 'error');
+            }
+        }
+
+        async function runVariabilityTest() {
+            try {
+                showResult('testResult', '암호화 변동성 테스트 시작...', 'info');
+                
+                const result = await testEncryptionVariability();
+                
+                document.getElementById('publicKeyInput').value = result.publicKey;
+                document.getElementById('privateKeyInput').value = result.privateKey;
+                document.getElementById('encryptedText').value = result.encrypted;
+                document.getElementById('decryptedText').value = result.decrypted;
+                document.getElementById('encryptBtn').disabled = false;
+                document.getElementById('decryptBtn').disabled = false;
+                
+                showResult('testResult', '🔐 암호화 변동성 테스트 완료!<br><small>같은 텍스트라도 매번 다른 암호화 결과가 나오는 것이 정상입니다. (보안상 의도된 동작)</small>', 'success');
+            } catch (error) {
+                showResult('testResult', `❌ 변동성 테스트 실패: ${error.message}`, 'error');
             }
         }
 
@@ -250,6 +306,65 @@
                 navigator.clipboard.writeText(privateKey).then(() => {
                     alert('개인키가 클립보드에 복사되었습니다.');
                 });
+            }
+        }
+
+        function copyDecryptedText() {
+            const decryptedText = document.getElementById('decryptedText').value;
+            if (decryptedText) {
+                navigator.clipboard.writeText(decryptedText).then(() => {
+                    alert('복호화된 텍스트가 클립보드에 복사되었습니다.');
+                });
+            }
+        }
+
+        async function generateQueryString() {
+            try {
+                if (!rsaCrypto) {
+                    alert('먼저 키를 생성하세요.');
+                    return;
+                }
+
+                const plainText = document.getElementById('plainText').value;
+                if (!plainText.trim()) {
+                    alert('암호화할 텍스트를 입력하세요.');
+                    return;
+                }
+
+                // 암호화
+                const encrypted = await rsaCrypto.encrypt(plainText);
+                
+                // 키 내보내기
+                const publicKey = await rsaCrypto.exportPublicKey();
+                const privateKey = await rsaCrypto.exportPrivateKey();
+
+                // 쿼리 스트링 생성
+                const queryString = `?pwd=${encodeURIComponent(encrypted)}&pukey=${encodeURIComponent(publicKey)}&prkey=${encodeURIComponent(privateKey)}`;
+                
+                document.getElementById('queryString').value = queryString;
+                
+                showResult('testResult', '✓ 쿼리 스트링 생성 완료!', 'success');
+            } catch (error) {
+                showResult('testResult', `❌ 쿼리 스트링 생성 실패: ${error.message}`, 'error');
+            }
+        }
+
+        function copyQueryString() {
+            const queryString = document.getElementById('queryString').value;
+            if (queryString) {
+                navigator.clipboard.writeText(queryString).then(() => {
+                    alert('쿼리 스트링이 클립보드에 복사되었습니다.');
+                });
+            }
+        }
+
+        function openPasswordPage() {
+            const queryString = document.getElementById('queryString').value;
+            if (queryString) {
+                const url = `password.html${queryString}`;
+                window.open(url, '_blank');
+            } else {
+                alert('먼저 쿼리 스트링을 생성하세요.');
             }
         }
 

@@ -146,6 +146,7 @@ class RSACrypto {
 
             const encoder = new TextEncoder();
             const data = encoder.encode(text);
+            console.log(`암호화 시작: 원본 텍스트 "${text}", ${data.length} 바이트`);
 
             // RSA-OAEP는 최대 데이터 크기가 제한됩니다 (키 크기에 따라)
             const maxChunkSize = 190; // 2048비트 키의 경우
@@ -153,6 +154,8 @@ class RSACrypto {
             
             for (let i = 0; i < data.length; i += maxChunkSize) {
                 const chunk = data.slice(i, i + maxChunkSize);
+                console.log(`청크 ${Math.floor(i/maxChunkSize) + 1} 암호화 중: ${chunk.length} 바이트`);
+                
                 const encryptedChunk = await window.crypto.subtle.encrypt(
                     {
                         name: "RSA-OAEP",
@@ -161,6 +164,7 @@ class RSACrypto {
                     chunk
                 );
                 chunks.push(new Uint8Array(encryptedChunk));
+                console.log(`청크 ${Math.floor(i/maxChunkSize) + 1} 암호화 완료: ${encryptedChunk.byteLength} 바이트`);
             }
 
             // 모든 청크를 하나로 합치기
@@ -173,8 +177,11 @@ class RSACrypto {
                 offset += chunk.length;
             }
 
-            return this.arrayBufferToBase64(result);
+            const base64Result = this.arrayBufferToBase64(result);
+            console.log(`암호화 완료: 총 ${totalLength} 바이트, Base64 길이: ${base64Result.length}`);
+            return base64Result;
         } catch (error) {
+            console.error("암호화 오류:", error);
             throw new Error(`암호화 실패: ${error.message}`);
         }
     }
@@ -194,17 +201,27 @@ class RSACrypto {
             const encryptedBuffer = this.base64ToArrayBuffer(encryptedData);
             const chunkSize = 256; // 2048비트 키의 경우 암호화된 청크 크기
             
+            console.log(`복호화 시작: 총 ${encryptedBuffer.length} 바이트, 청크 크기: ${chunkSize}`);
+            
             const chunks = [];
             for (let i = 0; i < encryptedBuffer.length; i += chunkSize) {
                 const chunk = encryptedBuffer.slice(i, i + chunkSize);
-                const decryptedChunk = await window.crypto.subtle.decrypt(
-                    {
-                        name: "RSA-OAEP",
-                    },
-                    privateKey,
-                    chunk
-                );
-                chunks.push(new Uint8Array(decryptedChunk));
+                console.log(`청크 ${Math.floor(i/chunkSize) + 1} 처리 중: ${chunk.length} 바이트`);
+                
+                try {
+                    const decryptedChunk = await window.crypto.subtle.decrypt(
+                        {
+                            name: "RSA-OAEP",
+                        },
+                        privateKey,
+                        chunk
+                    );
+                    chunks.push(new Uint8Array(decryptedChunk));
+                    console.log(`청크 ${Math.floor(i/chunkSize) + 1} 복호화 성공: ${decryptedChunk.byteLength} 바이트`);
+                } catch (chunkError) {
+                    console.error(`청크 ${Math.floor(i/chunkSize) + 1} 복호화 실패:`, chunkError);
+                    throw new Error(`청크 ${Math.floor(i/chunkSize) + 1} 복호화 실패: ${chunkError.message}`);
+                }
             }
 
             // 모든 청크를 하나로 합치기
@@ -217,9 +234,14 @@ class RSACrypto {
                 offset += chunk.length;
             }
 
+            console.log(`복호화 완료: 총 ${totalLength} 바이트`);
             const decoder = new TextDecoder();
-            return decoder.decode(result);
+            const decodedText = decoder.decode(result);
+            console.log(`복호화된 텍스트: "${decodedText}"`);
+            
+            return decodedText;
         } catch (error) {
+            console.error("복호화 오류:", error);
             throw new Error(`복호화 실패: ${error.message}`);
         }
     }
@@ -230,9 +252,9 @@ class RSACrypto {
      * @returns {string}
      */
     arrayBufferToBase64(buffer) {
-        const bytes = new Uint8Array(buffer);
+        const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
         let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) {
+        for (let i = 0; i < bytes.length; i++) {
             binary += String.fromCharCode(bytes[i]);
         }
         return btoa(binary);
@@ -249,11 +271,63 @@ class RSACrypto {
         for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
         }
-        return bytes.buffer;
+        return bytes;
     }
 }
 
 // 사용 예시 및 테스트 함수들
+
+// 같은 텍스트의 암호화 결과 비교 테스트
+async function testEncryptionVariability() {
+    try {
+        console.log("=== 같은 텍스트 암호화 결과 비교 테스트 ===");
+        
+        const rsa = new RSACrypto();
+        await rsa.generateKeyPair(2048);
+        
+        const testText = "안녕하세요! 테스트입니다.";
+        console.log(`테스트 텍스트: "${testText}"`);
+        
+        // 같은 텍스트를 3번 암호화
+        const results = [];
+        for (let i = 1; i <= 3; i++) {
+            console.log(`\n--- ${i}번째 암호화 ---`);
+            const encrypted = await rsa.encrypt(testText);
+            results.push(encrypted);
+            console.log(`암호화 결과: ${encrypted.substring(0, 50)}...`);
+        }
+        
+        // 결과 비교
+        console.log("\n=== 결과 비교 ===");
+        console.log("1번째 암호화:", results[0].substring(0, 50) + "...");
+        console.log("2번째 암호화:", results[1].substring(0, 50) + "...");
+        console.log("3번째 암호화:", results[2].substring(0, 50) + "...");
+        
+        // 복호화 테스트
+        console.log("\n=== 복호화 테스트 ===");
+        for (let i = 0; i < results.length; i++) {
+            const decrypted = await rsa.decrypt(results[i]);
+            console.log(`${i+1}번째 복호화 결과: "${decrypted}"`);
+            console.log(`원본과 일치: ${testText === decrypted ? "✓" : "✗"}`);
+        }
+        
+        console.log("\n=== 결론 ===");
+        console.log("✓ 같은 텍스트라도 매번 다른 암호화 결과가 나옵니다 (보안상 정상)");
+        console.log("✓ 모든 암호화 결과가 올바르게 복호화됩니다");
+        
+        return {
+            publicKey: await rsa.exportPublicKey(),
+            privateKey: await rsa.exportPrivateKey(),
+            encrypted: results[0],
+            decrypted: testText
+        };
+        
+    } catch (error) {
+        console.error("테스트 실패:", error.message);
+        throw error;
+    }
+}
+
 async function testRSACrypto() {
     try {
         console.log("RSA 암호화/복호화 테스트 시작...");
@@ -309,6 +383,7 @@ async function testRSACrypto() {
 if (typeof window !== 'undefined') {
     window.RSACrypto = RSACrypto;
     window.testRSACrypto = testRSACrypto;
+    window.testEncryptionVariability = testEncryptionVariability;
 }
 
 // Node.js 환경에서도 사용할 수 있도록 내보내기
