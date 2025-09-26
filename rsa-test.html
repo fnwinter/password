@@ -318,6 +318,39 @@
             }
         }
 
+        // 키 압축 및 Base64 인코딩 함수
+        function compressAndEncodeKey(key) {
+            // PEM 헤더/푸터 제거
+            const cleanKey = key
+                .replace(/-----BEGIN PUBLIC KEY-----/g, '')
+                .replace(/-----END PUBLIC KEY-----/g, '')
+                .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+                .replace(/-----END PRIVATE KEY-----/g, '')
+                .replace(/\s/g, '');
+            
+            // Base64 인코딩
+            return btoa(cleanKey);
+        }
+
+        // Base64 디코딩 및 키 복원 함수
+        function decodeAndDecompressKey(encodedKey, isPrivate = false) {
+            try {
+                // Base64 디코딩
+                const decoded = atob(encodedKey);
+                
+                // PEM 형식으로 복원
+                const header = isPrivate ? '-----BEGIN PRIVATE KEY-----' : '-----BEGIN PUBLIC KEY-----';
+                const footer = isPrivate ? '-----END PRIVATE KEY-----' : '-----END PUBLIC KEY-----';
+                
+                // 64자마다 줄바꿈 추가
+                const formattedKey = decoded.match(/.{1,64}/g).join('\n');
+                
+                return `${header}\n${formattedKey}\n${footer}`;
+            } catch (error) {
+                throw new Error(`키 디코딩 실패: ${error.message}`);
+            }
+        }
+
         async function generateQueryString() {
             try {
                 if (!rsaCrypto) {
@@ -338,12 +371,21 @@
                 const publicKey = await rsaCrypto.exportPublicKey();
                 const privateKey = await rsaCrypto.exportPrivateKey();
 
-                // 쿼리 스트링 생성
-                const queryString = `?pwd=${encodeURIComponent(encrypted)}&pukey=${encodeURIComponent(publicKey)}&prkey=${encodeURIComponent(privateKey)}`;
+                // 키 압축 및 Base64 인코딩
+                const compressedPublicKey = compressAndEncodeKey(publicKey);
+                const compressedPrivateKey = compressAndEncodeKey(privateKey);
+
+                // 압축률 계산
+                const originalLength = publicKey.length + privateKey.length;
+                const compressedLength = compressedPublicKey.length + compressedPrivateKey.length;
+                const compressionRatio = Math.round((1 - compressedLength / originalLength) * 100);
+
+                // 압축된 쿼리 스트링 생성
+                const queryString = `?pwd=${encodeURIComponent(encrypted)}&pukey=${encodeURIComponent(compressedPublicKey)}&prkey=${encodeURIComponent(compressedPrivateKey)}`;
                 
                 document.getElementById('queryString').value = queryString;
                 
-                showResult('testResult', '✓ 쿼리 스트링 생성 완료!', 'success');
+                showResult('testResult', `✓ 압축된 쿼리 스트링 생성 완료! (${compressionRatio}% 압축)`, 'success');
             } catch (error) {
                 showResult('testResult', `❌ 쿼리 스트링 생성 실패: ${error.message}`, 'error');
             }
