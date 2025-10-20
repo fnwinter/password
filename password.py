@@ -3,6 +3,8 @@ import base64
 import pyodide_js
 pyodide_js.loadPackage('cryptography')
 
+from pyscript.js_modules import password
+
 from pyscript import when
 from pyscript import document
 
@@ -88,18 +90,16 @@ def decryptUrlData(encrypted_b64, master_password):
         decrypted_json = decrypted_data.decode('utf-8')
         decrypted_sites = json.loads(decrypted_json)
 
-        print(f"Decrypted URL data: {decrypted_sites}")
+        print(f"Decrypted URL data: {decrypted_json}")
         
         # Call JavaScript function to handle the decrypted data
-        from pyscript import window
-        window.handleDecryptedData(decrypted_sites)
+        password.handleDecryptedData(decrypted_json)
         
         return decrypted_sites
         
     except Exception as e:
         print(f"Error decrypting URL data: {str(e)}")
-        from pyscript import window
-        window.handleDecryptedData(None)
+        password.handleDecryptedData(None)
         return None
 
 def decryptData(data, master_password):
