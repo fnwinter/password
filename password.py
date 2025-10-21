@@ -3,10 +3,9 @@ import base64
 import pyodide_js
 pyodide_js.loadPackage('cryptography')
 
-from pyscript.js_modules import password
-
 from pyscript import when
 from pyscript import document
+from pyscript.js_modules import password
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes

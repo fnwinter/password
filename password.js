@@ -1,4 +1,5 @@
 "use strict";
+
 // Global variables
 let allSites = [];
 
@@ -10,10 +11,10 @@ function addNewSite() {
     newDiv.innerHTML = `
             <label>Site: <input type="text" id="siteInput${siteCount}" placeholder="Enter site name or url" size="30"></label>
             <label>Password: <input type="password" id="passwordInput${siteCount}" placeholder="Enter password"></label>
-            <button onclick="togglePasswordById('passwordInput${siteCount}')">Show/Hide</button>
-            <button onclick="generatePasswordById('passwordInput${siteCount}')">Generate</button>
-            <button onclick="copyPasswordToClipboard('passwordInput${siteCount}')">Copy to Clipboard</button>
-            <button onclick="deleteSite(${siteCount})">Delete</button>
+            <button onclick="togglePasswordById('passwordInput${siteCount}')">👁️</button>
+            <button onclick="generatePasswordById('passwordInput${siteCount}')">🔑</button>
+            <button onclick="copyPasswordToClipboard('passwordInput${siteCount}')">📋</button>
+            <button onclick="deleteSite(${siteCount})">❌</button>
         `;
 
     newSiteDiv.appendChild(newDiv);
@@ -22,9 +23,9 @@ function addNewSite() {
 function togglePasswordById(inputId) {
     const passwordInput = document.getElementById(inputId);
     if (passwordInput.type === 'password') {
-    passwordInput.type = 'text';
+        passwordInput.type = 'text';
     } else {
-    passwordInput.type = 'password';
+        passwordInput.type = 'password';
     }
 }
 
@@ -33,11 +34,11 @@ function toggleMasterPasswords() {
     const confirmMasterPasswordInput = document.getElementById('confirmMasterPasswordInput');
     
     if (masterPasswordInput.type === 'password') {
-    masterPasswordInput.type = 'text';
-    confirmMasterPasswordInput.type = 'text';
+        masterPasswordInput.type = 'text';
+        confirmMasterPasswordInput.type = 'text';
     } else {
-    masterPasswordInput.type = 'password';
-    confirmMasterPasswordInput.type = 'password';
+        masterPasswordInput.type = 'password';
+        confirmMasterPasswordInput.type = 'password';
     }
 }
 
@@ -45,7 +46,7 @@ function generatePasswordById(inputId) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
     let password = '';
     for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     document.getElementById(inputId).value = password;
 }
@@ -98,6 +99,11 @@ function generateUrl() {
     return;
     }
 
+    if (masterPassword.length < 12) {
+    alert('Master password must be at least 12 characters long');
+    return;
+    }
+
     if (masterPassword !== confirmMasterPassword) {
     alert('Master passwords do not match');
     return;
@@ -119,7 +125,7 @@ function generateUrl() {
         }
     }
 
-    callPython(generateUrl.name, JSON.stringify(allSites), masterPassword)
+    py_generateUrl(JSON.stringify(allSites), masterPassword)
 
     } catch (error) {
     alert('Invalid URL format' + error);
@@ -160,14 +166,6 @@ function copyPasswordToClipboard(inputId) {
     });
 }
 
-function callPython(function_name, param1, param2, param3) {
-    console.log(function_name, param1, param2, param3);
-    const __callPython = document.getElementById('call_python');
-    __callPython.setAttribute('data-value',
-    JSON.stringify([function_name, param1, param2, param3]));
-    __callPython.click();
-}
-
 function checkUrlForEncryptedData() {
     const urlParams = new URLSearchParams(window.location.search);
     const encryptedData = urlParams.get('d');
@@ -190,8 +188,8 @@ function decryptUrlData() {
     }
     
     if (window.encryptedUrlData) {
-    // Call Python function to decrypt the data
-    callPython('decryptUrlData', window.encryptedUrlData, masterPassword);
+        // Call Python function to decrypt the data
+        py_decryptUrlData(window.encryptedUrlData, masterPassword);
     }
 }
 
@@ -248,4 +246,20 @@ window.handleDecryptedData = handleDecryptedData;
 window.onload = function () {
     addNewSite();
     checkUrlForEncryptedData();
+}
+
+function py_generateUrl(allSites, masterPassword) {
+    callPython("generateUrl", JSON.stringify(allSites), masterPassword);
+}
+
+function py_decryptUrlData(encryptedUrlData, masterPassword) {
+    callPython("decryptUrlData", encryptedUrlData, masterPassword);
+}
+
+function callPython(function_name, param1, param2, param3) {
+    console.log(function_name, param1, param2, param3);
+    const __callPython = document.getElementById('call_python');
+    __callPython.setAttribute('data-value',
+    JSON.stringify([function_name, param1, param2, param3]));
+    __callPython.click();
 }
