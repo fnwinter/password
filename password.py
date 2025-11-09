@@ -55,8 +55,12 @@ def generateUrl(data, master_password):
         url = f"https://fnwinter.github.io/password/password.html?d={encrypted_b64}"
         
         # Update the fullUrlInput with the generated URL
-        full_url_input = document.getElementById('fullUrlInput')
-        full_url_input.value = url
+        try:
+            full_url_input = document.getElementById('fullUrlInput')
+            full_url_input.value = url
+        except Exception as e:
+            print(f"Error updating fullUrlInput: {str(e)}")
+            return None
         
         print(f"Generated encrypted URL: {url}")
         return url
