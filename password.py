@@ -101,40 +101,6 @@ def decryptUrlData(encrypted_b64, master_password):
         password.handleDecryptedData(None)
         return None
 
-def decryptData(data, master_password):
-    try:
-        # Parse the JSON data
-        sites_data = json.loads(data)
-        
-        # Convert data to string for encryption
-        data_string = json.dumps(sites_data)
-        
-        # Generate encryption key from master password
-        password_bytes = master_password.encode('utf-8')
-        salt = b'salt_12345'  # In production, use a random salt
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=100000,
-        )
-        key = base64.urlsafe_b64encode(kdf.derive(password_bytes))
-
-        # Decrypt the data
-        fernet = Fernet(key)
-        decrypted_data = fernet.decrypt(data_string.encode('utf-8'))
-        
-        # Convert to JSON
-        decrypted_json = decrypted_data.decode('utf-8')
-        decrypted_sites = json.loads(decrypted_json)
-
-        print(f"Decrypted data: {decrypted_sites}")
-        return decrypted_sites
-        
-    except Exception as e:
-        print(f"Error decrypting data: {str(e)}")
-        return None
-
 if __name__=="__main__":
     print("run on console")
         
