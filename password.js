@@ -31,8 +31,8 @@ function addNewSite() {
             <label>Site: <input type="text" id="siteInput${siteCount}" placeholder="Enter site name or url" size="30"></label>
             <label>Password: <input type="password" id="passwordInput${siteCount}" placeholder="Enter password"></label>
             <button onclick="togglePasswordById('passwordInput${siteCount}')">👁️</button>
-            <button onclick="generatePasswordById('passwordInput${siteCount}')">🔑</button>
             <button onclick="copyPasswordToClipboard('passwordInput${siteCount}')">📋</button>
+            <button onclick="generatePasswordById('passwordInput${siteCount}')">🔑</button>
             <button onclick="deleteSite(${siteCount})">❌</button>
         `;
 
