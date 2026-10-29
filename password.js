@@ -244,6 +244,12 @@ export function handleDecryptedData(decryptedSites) {
             }
         });
 
+        // Fill master password fields with the password used to decrypt
+        const dialogMasterPassword = document.getElementById('dialogMasterPassword');
+        document.getElementById('masterPasswordInput').value = dialogMasterPassword.value;
+        document.getElementById('confirmMasterPasswordInput').value = dialogMasterPassword.value;
+        dialogMasterPassword.value = '';
+
         // Close the dialog
         closePasswordDialog();
         alert('Data decrypted and loaded successfully!');
