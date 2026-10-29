@@ -21,6 +21,8 @@ try:
     def dispatch_event(event):
         __call_python = document.querySelector("#call_python")
         __value = json.loads(event.target.getAttribute("data-value"))
+        # Remove plaintext data and master password from the DOM right after reading
+        event.target.removeAttribute("data-value")
         
         __function_name = __value[0]
         __param1 = __value[1]
@@ -61,7 +63,7 @@ def generateUrl(data, master_password):
     
     host_name = window.location.hostname
 
-    url = f"https://{host_name}/password/password.html?d={encrypted_b64}"
+    url = f"https://{host_name}/password/password.html#d={encrypted_b64}"
     
     # Update the fullUrlInput with the generated URL
     try:
