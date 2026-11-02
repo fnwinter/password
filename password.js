@@ -261,7 +261,6 @@ export function handleDecryptedData(decryptedSites) {
 
         // Close the dialog
         closePasswordDialog();
-        alert('Data decrypted and loaded successfully!');
     } else {
         alert('Failed to decrypt data. Please check your master password.');
     }
